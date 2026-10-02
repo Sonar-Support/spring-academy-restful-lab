@@ -40,3 +40,5 @@ out/
 ### vi code ###
 *.swp
 *.swo
+
+.sonar-config.json

@@ -36,7 +36,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -108,7 +110,7 @@ public class AccountControllerUnitTests {
         given(accountManager.save(any(Account.class)))
                 .willReturn(testAccount);
 
-        mockMvc.perform(post("/accounts")
+        mockMvc.perform(post("/accounts").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(asJsonString(testAccount)))
                 .andExpect(status().isCreated())
@@ -123,10 +125,22 @@ public class AccountControllerUnitTests {
     public void creatingAccountRespondsForbidden() throws Exception {
         Account testAccount = new Account("1234512345", "Mary Jones");
 
+        mockMvc.perform(post("/accounts").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(asJsonString(testAccount)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void stateChangingRequestWithoutCsrfTokenRespondsForbidden() throws Exception {
+        Account testAccount = new Account("1234512345", "Mary Jones");
+
         mockMvc.perform(post("/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(asJsonString(testAccount)))
                 .andExpect(status().isForbidden());
+
+        verifyNoInteractions(accountManager);
     }
 
     @Test
@@ -186,7 +200,7 @@ public class AccountControllerUnitTests {
                 }
         ).when(accountManager).addBeneficiary(0L, "Rufo");
 
-        mockMvc.perform(post("/accounts/{accountId}/beneficiaries", 0L)
+        mockMvc.perform(post("/accounts/{accountId}/beneficiaries", 0L).with(csrf())
                         .content("Rufo"))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
@@ -216,7 +230,7 @@ public class AccountControllerUnitTests {
                 }
         ).when(accountManager).removeBeneficiary(account.getEntityId(), beneficiaryName, allocationPercentages);
 
-        mockMvc.perform(delete("/accounts/{accountId}/beneficiaries/{beneficiaryName}", account.getEntityId(), beneficiaryName))
+        mockMvc.perform(delete("/accounts/{accountId}/beneficiaries/{beneficiaryName}", account.getEntityId(), beneficiaryName).with(csrf()))
                 .andExpect(status().isNoContent());
 
         verify(accountManager).removeBeneficiary(account.getEntityId(), beneficiaryName, allocationPercentages);
@@ -244,7 +258,7 @@ public class AccountControllerUnitTests {
         given(mockedAccount.getBeneficiary(beneficiaryName)).willReturn(beneficiaryToBeDeleted);
         given(mockedAccount.getBeneficiaries()).willReturn(beneficiaries);
 
-        mockMvc.perform(delete("/accounts/{accountId}/beneficiaries/{beneficiaryName}", 0L, beneficiaryName))
+        mockMvc.perform(delete("/accounts/{accountId}/beneficiaries/{beneficiaryName}", 0L, beneficiaryName).with(csrf()))
                 .andExpect(status().isNoContent());
 
         ArgumentCaptor<Map<String, Percentage>> rebalanced = ArgumentCaptor.forClass(Map.class);
@@ -279,7 +293,7 @@ public class AccountControllerUnitTests {
         given(accountManager.getAccount(accountId)).willReturn(mockedAccount);
         given(accountManager.getAccount(accountId).getName()).willReturn(differentUsername);
 
-        mockMvc.perform(put("/accounts/{accountId}",accountId)
+        mockMvc.perform(put("/accounts/{accountId}",accountId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(asJsonString(allocationPercentages)))
                 .andExpect(status().isForbidden());

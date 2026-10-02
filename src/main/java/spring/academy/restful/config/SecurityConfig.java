@@ -25,8 +25,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").hasAuthority("SCOPE_rewards:PROMETHEUS")
                         .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()))
-                .csrf((csfr -> csfr.ignoringRequestMatchers("/accounts/**")));
+                .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
     }
 }

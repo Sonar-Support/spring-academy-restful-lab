@@ -1,0 +1,7 @@
+{
+  "project": {
+    "projectKey": "Sonar-Support_spring-academy-restful-lab",
+    "path": ".",
+    "serverUrl": "https://lurodrig-sonarqube.ngrok.io"
+  }
+}
