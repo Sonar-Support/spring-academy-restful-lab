@@ -34,4 +34,4 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}  
-        run: ./gradlew build sonar -Dsonar.scanner.skipJreProvisioning=true --info
+        run: ./gradlew build sonar -Dsonar.scanner.skipJreProvisioning=true --stacktrace
