@@ -4,6 +4,7 @@ package spring.academy.restful.accounts.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -20,14 +21,17 @@ import spring.academy.restful.rewards.internal.account.Account;
 import spring.academy.restful.rewards.internal.account.Beneficiary;
 import spring.academy.restful.web.AccountController;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -220,14 +224,13 @@ public class AccountControllerUnitTests {
 
 
     @Test
-    @Disabled
-    // With the current implementation this test will fail: AccountController.resetAllocationPercentages makes the
-    // allocation percentages sum equals to 100%. I developed this test assuming equal distribution of the
-    // percentages between the beneficiaries (see solution proposed in the lab 40-boot-test on spring.academy
+    // AccountController.resetAllocationPercentages redistributes the removed percentage equally (rounding down) and
+    // gives the remainder to a random remaining beneficiary so that the total is exactly 100%. Hence we can't assert
+    // an exact map: we capture it and check the total and that each share is 33% or 34%.
+    // The removal itself is invoked with an empty map of allocation percentages.
     public void shouldRemoveNonUniqueBeneficiary() throws Exception {
         String beneficiaryName = "Rufo";
-        Percentage percentage = new Percentage(0.25);
-        Beneficiary beneficiaryToBeDeleted = new Beneficiary(beneficiaryName, percentage);
+        Beneficiary beneficiaryToBeDeleted = new Beneficiary(beneficiaryName, new Percentage(0.25));
 
         Set<Beneficiary> beneficiaries = Set.of(
                 new Beneficiary("Pascal", new Percentage(0.25)),
@@ -235,29 +238,29 @@ public class AccountControllerUnitTests {
                 new Beneficiary("Cobol", new Percentage(0.25)),
                 beneficiaryToBeDeleted);
 
-        Map<String, Percentage> allocationPercentages = Map.of(
-                "Pascal", new Percentage(0.33),
-                "Ada", new Percentage(0.33),
-                "Cobol", new Percentage(0.33));
-
         Account mockedAccount = mock(Account.class);
 
         given(accountManager.getAccount(0L)).willReturn(mockedAccount);
         given(mockedAccount.getBeneficiary(beneficiaryName)).willReturn(beneficiaryToBeDeleted);
         given(mockedAccount.getBeneficiaries()).willReturn(beneficiaries);
 
-        doAnswer((a) -> {
-                    assertTrue(Long.valueOf(0L).equals(a.getArgument(0)));
-                    assertTrue(beneficiaryName.equals(a.getArgument(1)));
-                    assertTrue(allocationPercentages.equals(a.getArgument(2)));
-                    return null;
-                }
-        ).when(accountManager).removeBeneficiary(0L, beneficiaryName, allocationPercentages);
-
         mockMvc.perform(delete("/accounts/{accountId}/beneficiaries/{beneficiaryName}", 0L, beneficiaryName))
                 .andExpect(status().isNoContent());
 
-        verify(accountManager).removeBeneficiary(0L, beneficiaryName, allocationPercentages);
+        ArgumentCaptor<Map<String, Percentage>> rebalanced = ArgumentCaptor.forClass(Map.class);
+        verify(accountManager).updateBeneficiaryAllocationPercentages(eq(0L), rebalanced.capture());
+
+        Map<String, Percentage> allocationPercentages = rebalanced.getValue();
+        assertEquals(Set.of("Pascal", "Ada", "Cobol"), allocationPercentages.keySet());
+        allocationPercentages.values().forEach(p -> assertTrue(
+                p.equals(new Percentage(0.33)) || p.equals(new Percentage(0.34)),
+                "Unexpected rebalanced percentage: " + p));
+        BigDecimal total = allocationPercentages.values().stream()
+                .map(Percentage::asBigDecimal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertEquals(0, BigDecimal.ONE.compareTo(total));
+
+        verify(accountManager).removeBeneficiary(0L, beneficiaryName, Map.of());
     }
 
 
