@@ -42,3 +42,6 @@ out/
 *.swo
 
 .sonar-config.json
+
+### Private keys ###
+*.pem

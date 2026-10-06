@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import spring.academy.restful.accounts.AccountManager;
+import spring.academy.restful.rewards.internal.account.Account;
 
 @Component("authz")
 public class AccountAuthorization {
@@ -17,8 +18,14 @@ public class AccountAuthorization {
 
     public boolean isOwnerOfTheAccount(Long accountId) {
         String userName = SecurityContextHolder.getContext().getAuthentication().getName();
-        String accountOwner = accountManager.getAccount(accountId).getName();
-        assert accountOwner != null;
+        Account account = accountManager.getAccount(accountId);
+        if (account == null) {
+            return false;
+        }
+        String accountOwner = account.getName();
+        if (accountOwner == null) {
+            return false;
+        }
         return userName.equals(accountOwner);
     }
 
