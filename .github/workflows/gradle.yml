@@ -32,6 +32,6 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle
       - name: Build and analyze
-        env:
+        env: # no need of SONAR_HOST_URL if you want to use sonarcloud.io
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew build sonar -Dsonar.scanner.skipJreProvisioning=true --info
