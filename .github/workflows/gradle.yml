@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - test_sonar_fix_issue_skill_and_agentic_stuff
+      - release-abc
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
