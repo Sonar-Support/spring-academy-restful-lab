@@ -2,7 +2,8 @@ name: Build
 on:
   push:
     branches:
-      - main # the name of your main branch
+      - main
+      - test_sonar_fix_issue_skill_and_agentic_stuff
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
